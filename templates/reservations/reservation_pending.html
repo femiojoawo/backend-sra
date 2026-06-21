@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Réservation enregistrée</title>
+</head>
+<body style="
+    margin:0;
+    padding:0;
+    background-color:#f5f5f5;
+    font-family:Arial, Helvetica, sans-serif;
+    color:#333333;
+">
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+        <td align="center" style="padding:40px 20px;">
+
+            <table width="650" cellpadding="0" cellspacing="0" border="0" style="
+                background:#ffffff;
+                border-radius:12px;
+                overflow:hidden;
+            ">
+
+                <tr>
+                    <td style="height:6px;background:#D4AF37;"></td>
+                </tr>
+
+                <tr>
+                    <td align="center" style="padding:35px 30px 20px 30px;">
+                        <img
+                            src="https://sra-hotel.com/media/logo-SweetRestAparthotel_color.png"
+                            alt="{{ hotel_name }}"
+                            style="max-width:220px;height:auto;display:block;"
+                        >
+                    </td>
+                </tr>
+
+                <tr>
+                    <td align="center" style="padding:0 40px 10px 40px;">
+                        <h1 style="margin:0;font-size:28px;font-weight:700;color:#333333;">
+                            Votre demande de réservation a bien été enregistrée
+                        </h1>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:20px 50px 10px 50px;font-size:15px;line-height:1.8;color:#555555;">
+                        <p>Bonjour <strong>{{ client_name }}</strong>,</p>
+                        <p>
+                            Nous vous remercions d'avoir choisi
+                            <strong>{{ hotel_name }}</strong>.
+                        </p>
+                        <p>
+                            Nous avons bien reçu votre demande de réservation
+                            et votre chambre a été pré-réservée.
+                        </p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:10px 50px 25px 50px;">
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td style="
+                                    background:#FFF8E7;
+                                    border-left:5px solid #D4AF37;
+                                    padding:20px;
+                                    font-size:15px;
+                                    line-height:1.7;
+                                    color:#555555;
+                                ">
+                                    <strong style="color:#B8860B;">
+                                        Réservation en attente de confirmation
+                                    </strong>
+                                    <br><br>
+                                    Afin de garantir votre séjour,
+                                    un paiement est requis.
+                                    Dès validation de celui-ci,
+                                    un e-mail de confirmation définitive
+                                    vous sera envoyé automatiquement.
+                                    <b>Un délai de 24 heures est requis sinon la reservation sera annulée</b>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:0 50px;">
+                        <h2 style="margin:0 0 15px 0;color:#B8860B;font-size:20px;">
+                            Détails de la réservation
+                        </h2>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:0 50px 25px 50px;">
+                        <table width="100%" cellpadding="12" cellspacing="0" style="border:1px solid #ececec;border-radius:8px;">
+                            <tr><td width="45%"><strong>Référence</strong></td><td>{{ reservation_reference }}</td></tr>
+                            <tr><td><strong>Date d'arrivée</strong></td><td>{{ check_in_date }}</td></tr>
+                            <tr><td><strong>Date de départ</strong></td><td>{{ check_out_date }}</td></tr>
+                            <tr><td><strong>Adultes</strong></td><td>{{ nb_adults }}</td></tr>
+                            <tr><td><strong>Enfants</strong></td><td>{{ nb_children }}</td></tr>
+                            <tr>
+                                <td><strong>Montant total</strong></td>
+                                <td style="color:#B8860B;font-weight:bold;font-size:16px;">{{ total_price }} FCFA</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:0 50px 30px 50px;">
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td style="background:#FFF8E7;padding:25px;border-radius:8px;">
+                                    <h2 style="margin-top:0;margin-bottom:15px;color:#B8860B;font-size:20px;">
+                                        Informations de paiement
+                                    </h2>
+                                    <p style="margin:0 0 15px 0;font-size:15px;line-height:1.7;">
+                                        Pour procéder au paiement ou obtenir des
+                                        informations complémentaires, veuillez nous contacter :
+                                    </p>
+                                    <p style="margin:0;font-size:15px;line-height:1.8;">
+                                        <strong>Téléphone :</strong> {{ payment_phone }}<br>
+                                        <strong>Email :</strong> {{ payment_email }}
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="
+                        background:#fafafa;
+                        padding:30px;
+                        text-align:center;
+                        font-size:13px;
+                        color:#777777;
+                        border-top:1px solid #eeeeee;
+                    ">
+                        <strong style="color:#333333;font-size:15px;">{{ hotel_name }}</strong>
+                        <br><br>
+                        {{ hotel_address }}<br>
+                        {{ hotel_phone }}<br>
+                        {{ hotel_email }}
+                        <br><br>
+                        &copy; {{ current_year }} {{ hotel_name }}
+                    </td>
+                </tr>
+
+            </table>
+
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>
