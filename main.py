@@ -4,8 +4,11 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+
 from auth import token
-from api.v1 import user,room_types, room_images, rooms, reservations
+from api.v1 import (user,room_types, room_images
+    , rooms, services, products,
+    reservations, equiments, formules)
 from core.config import config
 
 app = FastAPI()
@@ -37,3 +40,7 @@ app.include_router(room_types.router)
 app.include_router(room_images.router)
 app.include_router(rooms.router)
 app.include_router(reservations.router)
+app.include_router(services.router)
+app.include_router(equiments.router)
+app.include_router(formules.router)
+app.include_router(products.router)

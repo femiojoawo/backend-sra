@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Body, Query, BackgroundTa
 from sqlmodel import Session, select, func
 from datetime import date, datetime, timedelta
 from pydantic import BaseModel
-
-from .utils import is_room_available
+from core.config import config
+from .utils import build_email_context, build_item_payment_context, is_room_available
 from auth import auth_utils
 from dependencies import get_session
 from models.models import (
@@ -13,7 +13,10 @@ from models.models import (
     User, RoleEnum, Room, RoomReservation, StatusResrvationEnum,
     PaginatedResponse, FilterParams, ServiceRequest, OrderItem, StatusResrvationEnum,
     ReadRoomWithType, ReadService, ReadOrderItem,ReadServiceRequest,ReadRoomReservation
+    ,payementStatusEnum
 )
+from services.email_service import send_reservation_email
+
 
 router = APIRouter(
     prefix="/reservations",
@@ -89,13 +92,13 @@ def get_reservations(
     )
 
 @router.post("/", response_model=ReadReservationWithDetails, summary="Créer une réservation complète")
-def create_reservation(
+async def create_reservation(
     *,
     reservation_data: Annotated[CreateReservation, Body(...)],
     room_ids: List[int] = Body(..., description="Liste des IDs des chambres"),
     services: List[ServiceRequestInput] = Body(default=[], description="Services demandés au moment de la réservation"),
     order_items: List[OrderItemInput] = Body(default=[], description="Produits ou formules commandés"),
-    #background_tasks: BackgroundTasks,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     current_user: User = Depends(auth_utils.get_current_user)
 ):
@@ -200,15 +203,17 @@ def create_reservation(
     session.commit()
     session.refresh(db_reservation)
 
-    # 8. Envoi de l'e-mail en arrière-plan
-    # email_data = build_email_context(session, current_user, db_reservation)
-    # background_tasks.add_task(
-    #     send_reservation_email,
-    #     email=current_user.email,
-    #     reservation_details=email_data,
-    #     message_title="Votre demande de réservation a été enregistrée",
-    #     template_name="reservations/reservation_pending.html"
-    # )
+    client_to_email = session.get(User, db_reservation.assigned_to) if db_reservation.assigned_to else current_user
+
+    if client_to_email:
+        email_data = build_email_context(session, client_to_email, db_reservation)
+        background_tasks.add_task(
+            send_reservation_email,
+            email=client_to_email.email,
+            reservation_details=email_data,
+            message_title="Votre demande de réservation a été enregistrée",
+            template_name="reservations/reservation_pending.html"
+        )
 
     return db_reservation
 
@@ -343,5 +348,161 @@ def update_full_reservation(
     return db_reservation
 
 
+@router.post("/{reservation_id}/validate", response_model=ReadReservationWithDetails, summary="Valider et marquer une réservation comme payée")
+def validate_reservation(
+    reservation_id: int,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(auth_utils.RoleChecker([RoleEnum.ADMIN, RoleEnum.RECEPTIONISTE]))
+):
+    # 1. Récupération de la réservation
+    db_reservation = session.get(Reservation, reservation_id)
+    if not db_reservation:
+        raise HTTPException(status_code=404, detail="Réservation introuvable")
+
+    if db_reservation.status == StatusResrvationEnum.CONFIRMEE:
+        raise HTTPException(status_code=400, detail="Cette réservation est déjà confirmée et payée.")
+
+    now = datetime.now()
+
+    # 2. Mise à jour du statut principal
+    db_reservation.status = StatusResrvationEnum.CONFIRMEE
+
+    # 3. Validation des paiements pour les Chambres, Services et Commandes
+    for room_res in db_reservation.room_reservations:
+        room_res.stay_status = payementStatusEnum.pAYEE
+        room_res.payment_date = now
+        session.add(room_res)
+
+    for service_req in db_reservation.service_requests:
+        service_req.status = payementStatusEnum.pAYEE
+        service_req.payment_date = now
+        session.add(service_req)
+
+    for order_item in db_reservation.order_items:
+        order_item.status = payementStatusEnum.pAYEE
+        order_item.payment_date = now
+        session.add(order_item)
+
+    # 4. Sauvegarde globale en base de données
+    session.add(db_reservation)
+    session.commit()
+    session.refresh(db_reservation)
+
+    # 5. Envoi de l'e-mail de confirmation
+    client_to_email = session.get(User, db_reservation.assigned_to)
+    if client_to_email:
+        email_data = build_email_context(session, client_to_email, db_reservation)
+        background_tasks.add_task(
+            send_reservation_email,
+            email=client_to_email.email,
+            reservation_details=email_data,
+            message_title=f"Confirmation de votre réservation - {config.hotel_name}",
+            template_name="reservations/reservation_confirmed.html"
+        )
+
+    return db_reservation
 
 
+
+
+
+@router.post("/{reservation_id}/services/{service_request_id}/pay", response_model=ReadReservationWithDetails, summary="Payer un service spécifique")
+def pay_service_request(
+    reservation_id: int,
+    service_request_id: int,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(auth_utils.RoleChecker([RoleEnum.ADMIN, RoleEnum.RECEPTIONISTE]))
+):
+    # 1. Vérifications de base
+    db_reservation = session.get(Reservation, reservation_id)
+    if not db_reservation:
+        raise HTTPException(status_code=404, detail="Réservation introuvable")
+
+    service_req = session.get(ServiceRequest, service_request_id)
+    if not service_req or service_req.reservation_id != reservation_id:
+        raise HTTPException(status_code=404, detail="Demande de service introuvable pour cette réservation")
+
+    if service_req.status == payementStatusEnum.pAYEE:
+        raise HTTPException(status_code=400, detail="Ce service a déjà été payé.")
+
+    # 2. Mise à jour du statut
+    now = datetime.now()
+    service_req.status = payementStatusEnum.pAYEE
+    service_req.payment_date = now
+    
+    session.add(service_req)
+    session.commit()
+    session.refresh(db_reservation)
+
+    # 3. Récupération du nom du service pour l'e-mail
+    service = session.get(Service, service_req.service_id)
+    item_name = service.name if service else "Service additionnel"
+
+    # 4. Envoi de l'e-mail de reçu
+    client_to_email = session.get(User, db_reservation.assigned_to)
+    if client_to_email:
+        email_data = build_item_payment_context(client_to_email, db_reservation, item_name, service_req.total_price, now)
+        background_tasks.add_task(
+            send_reservation_email,
+            email=client_to_email.email,
+            reservation_details=email_data,
+            message_title=f"Reçu de paiement - {item_name}",
+            template_name="reservations/payment_receipt.html"
+        )
+
+    return db_reservation
+
+
+@router.post("/{reservation_id}/order_items/{order_item_id}/pay", response_model=ReadReservationWithDetails, summary="Payer un produit ou une formule")
+def pay_order_item(
+    reservation_id: int,
+    order_item_id: int,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(auth_utils.RoleChecker([RoleEnum.ADMIN, RoleEnum.RECEPTIONISTE]))
+):
+    # 1. Vérifications de base
+    db_reservation = session.get(Reservation, reservation_id)
+    if not db_reservation:
+        raise HTTPException(status_code=404, detail="Réservation introuvable")
+
+    order_item = session.get(OrderItem, order_item_id)
+    if not order_item or order_item.reservation_id != reservation_id:
+        raise HTTPException(status_code=404, detail="Commande introuvable pour cette réservation")
+
+    if order_item.status == payementStatusEnum.pAYEE:
+        raise HTTPException(status_code=400, detail="Cet article a déjà été payé.")
+
+    # 2. Mise à jour du statut
+    now = datetime.now()
+    order_item.status = payementStatusEnum.pAYEE
+    order_item.payment_date = now
+    
+    session.add(order_item)
+    session.commit()
+    session.refresh(db_reservation)
+
+    # 3. Identification du produit/formule pour l'e-mail
+    item_name = "Article commandé"
+    if order_item.product_id:
+        prod = session.get(Product, order_item.product_id)
+        if prod: item_name = prod.name
+    elif order_item.formule_id:
+        form = session.get(Formule, order_item.formule_id)
+        if form: item_name = form.name
+
+    # 4. Envoi de l'e-mail de reçu
+    client_to_email = session.get(User, db_reservation.assigned_to)
+    if client_to_email:
+        email_data = build_item_payment_context(client_to_email, db_reservation, f"Commande : {item_name}", order_item.total_price, now)
+        background_tasks.add_task(
+            send_reservation_email,
+            email=client_to_email.email,
+            reservation_details=email_data,
+            message_title=f"Reçu de paiement - {item_name}",
+            template_name="reservations/payment_receipt.html"
+        )
+
+    return db_reservation

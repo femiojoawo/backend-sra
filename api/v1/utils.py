@@ -5,6 +5,9 @@ from models.models import (
     Reservation, RoomReservation, StatusResrvationEnum, User,
     
 )
+from sqlmodel import Session
+from core.config import config
+
 def is_room_available(
     session: Session, 
     room_ids: List[int], 
@@ -35,19 +38,48 @@ def is_room_available(
     
     # Si la liste est vide, aucune chambre n'est occupée, donc c'est disponible
     return len(occupied_rooms) == 0
-
-def build_email_context(user: User, reservation: Reservation) -> dict:
+def build_email_context(session: Session, user: User, reservation: Reservation) -> dict:
+    """
+    Construit le dictionnaire de données injecté dans les templates d'e-mail HTML.
+    Adapté au modèle Reservation actuel (sans nb_adults / nb_children).
+    """
     return {
-        "hotel_name": "SweetRest Aparthotel",
         "client_name": f"{user.first_name} {user.last_name}",
+        "hotel_name": config.hotel_name,
         "reservation_reference": reservation.reference,
+        
+        # Formatage des dates au format français (ex: 29/06/2026 à 14:00)
         "check_in_date": reservation.check_in.strftime("%d/%m/%Y à %H:%M"),
         "check_out_date": reservation.check_out.strftime("%d/%m/%Y à %H:%M"),
-        "total_price": f"{reservation.total_price:,.0f}".replace(",", " "), # Format FCFA
-        "hotel_phone": "+225 07 XX XX XX XX",
-        "hotel_email": "contact@sra-hotel.com",
-        "hotel_address": "Yamoussoukro, Côte d'Ivoire",
-        "payment_phone": "+225 05 XX XX XX XX",
-        "payment_email": "paiement@sra-hotel.com",
-        "current_year": datetime.now().year,
+        
+        # Formatage du prix avec séparateur de milliers
+        "total_price": f"{reservation.total_price:,.0f}".replace(",", " "),
+        
+        # Infos de l'hôtel tirées du fichier de config (.env)
+        "payment_phone": config.hotel_phone,
+        "payment_email": config.hotel_email,
+        "hotel_address": config.hotel_address,
+        "hotel_phone": config.hotel_phone,
+        "hotel_email": config.hotel_email,
+        "current_year": datetime.now().year
+    }
+
+from decimal import Decimal
+# ... (tes autres imports) ...
+
+def build_item_payment_context(user: User, reservation: Reservation, item_name: str, item_price: Decimal, payment_date: datetime) -> dict:
+    """
+    Construit le contexte pour l'e-mail de reçu d'un paiement ciblé (Service ou Produit).
+    """
+    return {
+        "client_name": f"{user.first_name} {user.last_name}",
+        "hotel_name": config.hotel_name,
+        "reservation_reference": reservation.reference,
+        "item_name": item_name,
+        "item_price": f"{item_price:,.0f}".replace(",", " "),
+        "payment_date": payment_date.strftime("%d/%m/%Y à %H:%M"),
+        "hotel_address": config.hotel_address,
+        "hotel_phone": config.hotel_phone,
+        "hotel_email": config.hotel_email,
+        "current_year": datetime.now().year
     }
