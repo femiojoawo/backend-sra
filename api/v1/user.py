@@ -34,6 +34,12 @@ def get_users(*,
         data= users
     )
 
+
+@router.get("/me", response_model=ReadUser)
+def get_current_user(current_user: User = Depends(auth_utils.get_current_user)):
+    return current_user
+
+
 @router.get("/{user_id}", response_model=ReadUser)
 def get_user_by_id(*, user_id: int, session: Session = Depends(get_session), current_user: User = Depends(auth_utils.RoleChecker([RoleEnum.ADMIN]))):
     user = session.get(User, user_id)

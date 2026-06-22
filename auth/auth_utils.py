@@ -10,6 +10,7 @@ from dependencies import get_session
 from core.config import config
 from models.models import RoleEnum, User, JWTInfoUser
 
+
 # Outil pour hacher et vérifier les mots de passe
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
@@ -18,6 +19,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
+
 
 def get_password_hash(password):
     return pwd_context.hash(password)
@@ -29,6 +31,8 @@ def create_access_token(data: JWTInfoUser):
     # On crée le JWT ici
     encoded_jwt = jwt.encode(to_encode, config.secret_key, algorithm=config.algorithm)
     return encoded_jwt
+
+
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Depends(get_session)):

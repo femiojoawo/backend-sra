@@ -5,7 +5,8 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from auth import token
-from api.v1 import user
+from api.v1 import user,room_types, room_images, rooms
+from core.config import config
 
 app = FastAPI()
 
@@ -13,8 +14,9 @@ app = FastAPI()
 # UPLOADS_DIR = Path(__file__).resolve().parent.parent / "uploads"
 # os.makedirs(UPLOADS_DIR, exist_ok=True) # verifier que le dossier existe, sinon le créer
 
-# Servir les fichiers uploadés (images)
-# app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
+#Servir les fichiers uploadés (images)
+
+app.mount(config.uploads_url, StaticFiles(directory=str(config.UPLOADS_DIR)), name="uploads")
 
 # a modifier pour mettre l'url du front end
 origins = [
@@ -31,3 +33,6 @@ app.add_middleware(
 
 app.include_router(token.router)
 app.include_router(user.router)
+app.include_router(room_types.router)
+app.include_router(room_images.router)
+app.include_router(rooms.router)

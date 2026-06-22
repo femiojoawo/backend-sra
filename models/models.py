@@ -153,7 +153,7 @@ class RoomType(BaseRoomType, table=True):
     # relations
     rooms: List["Room"] = Relationship(back_populates="room_type")
     equipements: List["Equipement"] = Relationship(back_populates="room_types", link_model=RoomTypeEquipement)
-    images: List["RoomImage"] = Relationship(back_populates="room_type")
+    # images: List["RoomImage"] = Relationship(back_populates="room_type")
 
 
 class CreateRoomType(BaseRoomType):
@@ -337,30 +337,35 @@ class UpdateEquipement(SQLModel):
 # =====================================
 # Models for Room Images
 # =====================================
+
 class BaseRoomImage(SQLModel):
     name: str
     url: str
-    room_type_id: int = Field(foreign_key="room_types.id")
+
 
 class RoomImage(BaseRoomImage, table=True):
     __tablename__ = "room_images"
 
     id: int | None = Field(default=None, primary_key=True)
 
+    room_id: int = Field(foreign_key="rooms.id")
     # relation
-    room_type: RoomType = Relationship(back_populates="images")
+    room: "Room" = Relationship(back_populates="images")
 
 
 class CreateRoomImage(BaseRoomImage):
-    pass
+    room_id: int
 
 class ReadRoomImage(BaseRoomImage):
     id: int
+    
 
 class UpdateRoomImage(SQLModel):
     name: str | None = None
     url: str | None = None
     room_type_id: int | None = None
+
+
 
 # =====================================
 # Models for Apartments
@@ -464,6 +469,7 @@ class Room(BaseRoom, table=True):
     room_type: RoomType = Relationship(back_populates="rooms")
     reservations: List[Reservation] = Relationship(back_populates="rooms", link_model=RoomReservation)
     apartments: List[Apartment] = Relationship(back_populates="rooms", link_model=RoomApartment)
+    images : List["RoomImage"] = Relationship(back_populates="room")
 
 
 class CreateRoom(BaseRoom):
@@ -471,6 +477,9 @@ class CreateRoom(BaseRoom):
 
 class ReadRoom(BaseRoom):
     id: int
+    
+class ReadRoomWithType(ReadRoom):
+    room_type : ReadRoomType
 
 class UpdateRoom(SQLModel):
     room_number: int | None = None
@@ -492,6 +501,25 @@ class UserFilters(FilterParams):
     is_active: Optional[bool] = True
     role_name: Optional[RoleEnum] = RoleEnum.CLIENT
 
+class RoomTypeFilters(FilterParams):
+    name: str = None
+    capacity: int = Field(default=1, ge=1, le=4)
+    price_min: int = Field(default=50000, ge=0)
+    price_max: int = Field(default=1000000, ge=0)
+
+
+class RoomFilters(FilterParams):
+    room_number: Optional[int] = None
+    status: Optional[RoomStatusEnum] = None
+    room_type_id: Optional[int] = None
+
+
+class AvailabilityFilters(FilterParams):
+    check_in: date
+    check_out: date
+    room_type_id: Optional[int] = None
+    capacity: Optional[int] = None
+
 # permet de renvoyer une liste d'objets de n'importe quelle entité avec les infos de pagination
 T = TypeVar("T")
 class PaginatedResponse(
@@ -503,4 +531,3 @@ class PaginatedResponse(
     total: int
 
     data: Sequence[T]
-    
