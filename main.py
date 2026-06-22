@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from auth import token
 from api.v1 import (user,room_types, room_images
     , rooms, services, products,
-    reservations, equiments, formules)
+    reservations, equiments, formules, product_types)
 from core.config import config
 
 app = FastAPI()
@@ -44,3 +44,4 @@ app.include_router(services.router)
 app.include_router(equiments.router)
 app.include_router(formules.router)
 app.include_router(products.router)
+app.include_router(product_types.router)
