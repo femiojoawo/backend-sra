@@ -506,3 +506,104 @@ def pay_order_item(
         )
 
     return db_reservation
+
+
+
+@router.post("/{reservation_id}/services", response_model=ReadReservationWithDetails, summary="Ajouter un service à une réservation existante")
+def add_service_to_reservation(
+    reservation_id: int,
+    service_input: ServiceRequestInput,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(auth_utils.RoleChecker([RoleEnum.ADMIN, RoleEnum.RECEPTIONISTE]))
+):
+    # 1. Vérifier si la réservation existe
+    db_reservation = session.get(Reservation, reservation_id)
+    if not db_reservation:
+        raise HTTPException(status_code=404, detail="Réservation introuvable")
+
+    # 2. Vérifier si le service existe
+    db_service = session.get(Service, service_input.service_id)
+    if not db_service:
+        raise HTTPException(status_code=404, detail="Service introuvable")
+
+    # 3. Calcul du prix pour ce service
+    tot = db_service.price * service_input.quantity
+
+    # 4. Création de la demande de service
+    service_req = ServiceRequest(
+        reservation_id=db_reservation.id,
+        service_id=db_service.id,
+        quantity=service_input.quantity,
+        unit_price=db_service.price,
+        total_price=tot,
+        status=payementStatusEnum.IMpAYEE # Reste impayé par défaut lors de l'ajout
+    )
+    session.add(service_req)
+
+    # 5. Mise à jour du prix total de la réservation
+    db_reservation.total_price += tot
+    session.add(db_reservation)
+
+    # 6. Sauvegarde en base de données
+    session.commit()
+    session.refresh(db_reservation)
+
+    return db_reservation
+
+
+@router.post("/{reservation_id}/order_items", response_model=ReadReservationWithDetails, summary="Ajouter une commande (produit/formule) à une réservation existante")
+def add_order_item_to_reservation(
+    reservation_id: int,
+    order_input: OrderItemInput,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(auth_utils.RoleChecker([RoleEnum.ADMIN, RoleEnum.RECEPTIONISTE]))
+):
+    # 1. Vérifier si la réservation existe
+    db_reservation = session.get(Reservation, reservation_id)
+    if not db_reservation:
+        raise HTTPException(status_code=404, detail="Réservation introuvable")
+
+    # 2. Vérification de cohérence (il faut au moins un produit ou une formule)
+    if not order_input.product_id and not order_input.formule_id:
+        raise HTTPException(
+            status_code=400, 
+            detail="La commande doit contenir au moins un product_id ou un formule_id."
+        )
+
+    # 3. Récupération des prix
+    price = Decimal(0)
+    if order_input.product_id:
+        prod = session.get(Product, order_input.product_id)
+        if not prod:
+            raise HTTPException(status_code=404, detail="Produit introuvable")
+        price = prod.price
+    elif order_input.formule_id:
+        form = session.get(Formule, order_input.formule_id)
+        if not form:
+            raise HTTPException(status_code=404, detail="Formule introuvable")
+        price = form.price
+
+    # Calcul du total pour cet ajout
+    tot = price * order_input.quantity_ordered
+
+    # 4. Création de l'OrderItem
+    order_item = OrderItem(
+        reservation_id=db_reservation.id,
+        product_id=order_input.product_id,
+        formule_id=order_input.formule_id,
+        quantity_ordered=order_input.quantity_ordered,
+        unit_price=price,
+        total_price=tot,
+        status=payementStatusEnum.IMpAYEE # Reste impayé par défaut lors de l'ajout
+    )
+    session.add(order_item)
+
+    # 5. Mise à jour du prix total de la réservation
+    db_reservation.total_price += tot
+    session.add(db_reservation)
+
+    # 6. Sauvegarde en base de données
+    session.commit()
+    session.refresh(db_reservation)
+
+    return db_reservation
