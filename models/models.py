@@ -55,7 +55,17 @@ class ServiceRequest(SQLModel, table=True):             # was demander
     request_date: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime))
     quantity: int
     status: payementStatusEnum = payementStatusEnum.IMpAYEE
+    payment_date: Optional[datetime] = Field(default=None, sa_column=Column(DateTime))
 
+    service: "Service" = Relationship(back_populates="service_requests")
+
+class ReadServiceRequest(SQLModel):
+    id: int
+    service: "ReadService"
+    request_date: datetime
+    quantity: int
+    status: payementStatusEnum
+    payment_date: Optional[datetime]
 
 class RoomReservation(SQLModel, table=True):            # was contenir
     __tablename__ = "room_reservations"
@@ -224,9 +234,9 @@ class BaseReservation(SQLModel):
     check_in: datetime
     check_out: datetime
     description: str | None = Field(default=None)
-    status: StatusResrvationEnum
+    status: StatusResrvationEnum = StatusResrvationEnum.EN_ATTENTE
     total_price: Decimal = Field(default=0, max_digits=10, decimal_places=2)
-    assigned_to: int  
+    assigned_to: int = Field(default=None, foreign_key="users.id") # l'admin ou le réceptionniste qui gère la réservation 
 
 
 class Reservation(BaseReservation, table=True):
@@ -254,6 +264,7 @@ class ReadReservation(BaseReservation):
     user_id: int
 
 
+
 class UpdateReservation(SQLModel):
     reference: str | None = None
     check_in: datetime | None = None
@@ -275,11 +286,22 @@ class OrderItem(SQLModel, table=True):                  # was commander
     quantity_ordered: int
     order_date: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime))
     status: payementStatusEnum = payementStatusEnum.IMpAYEE
+    payment_date: Optional[datetime] = Field(default=None, sa_column=Column(DateTime))
 
     # relationships
     reservation: "Reservation" = Relationship(back_populates="order_items")
     product: "Product" = Relationship(back_populates="order_items")
     formule: "Formule" = Relationship(back_populates="order_items")
+
+class ReadOrderItem(SQLModel):
+    id: int
+    product: Optional["ReadProduct"]
+    formule: Optional["ReadFormule"]
+    quantity_ordered: int
+    order_date: datetime
+    status: payementStatusEnum
+    payment_date: Optional[datetime]
+
 # =====================================
 # Models for Services
 # =====================================
@@ -296,6 +318,7 @@ class Service(BaseService, table=True):
 
     # relationship
     reservations: List[Reservation] = Relationship(back_populates="services", link_model=ServiceRequest)
+    service_requests : List[ServiceRequest] = Relationship(back_populates="service")
 
 class CreateService(BaseService):
     pass
