@@ -41,6 +41,17 @@ class ReadReservationWithDetails(ReadReservation):
     services: List[ReadServiceRequest]
     order_items: List[ReadOrderItem]
 
+class ReservationFullUpdateInput(BaseModel):
+    check_in: Optional[datetime] = None
+    check_out: Optional[datetime] = None
+    nb_adults: Optional[int] = None
+    nb_children: Optional[int] = None
+    description: Optional[str] = None
+    
+    room_ids: Optional[List[int]] = None
+    services: Optional[List[ServiceRequestInput]] = None
+    order_items: Optional[List[OrderItemInput]] = None
+
 # ==========================================
 # Routes CRUD Réservations
 # ==========================================

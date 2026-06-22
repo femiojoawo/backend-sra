@@ -47,13 +47,23 @@ class FormuleProduct(SQLModel, table=True):             # was former
 
 
 
-class ServiceRequest(SQLModel, table=True):             # was demander
+class ServiceRequest(SQLModel, table=True):             
     __tablename__ = "service_requests"
 
-    reservation_id: int = Field(foreign_key="reservations.id", primary_key=True)
-    service_id: int = Field(foreign_key="services.id", primary_key=True)
+    # Ajout de l'ID unique (clé primaire)
+    id: int | None = Field(default=None, primary_key=True)
+    
+    # Les clés étrangères perdent l'attribut primary_key=True
+    reservation_id: int = Field(foreign_key="reservations.id")
+    service_id: int = Field(foreign_key="services.id")
+    
     request_date: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime))
     quantity: int
+    
+    # Conservation des prix pour l'historisation
+    unit_price: Decimal = Field(default=0, max_digits=10, decimal_places=2)
+    total_price: Decimal = Field(default=0, max_digits=10, decimal_places=2)
+    
     status: payementStatusEnum = payementStatusEnum.IMpAYEE
     payment_date: Optional[datetime] = Field(default=None, sa_column=Column(DateTime))
 
@@ -70,11 +80,16 @@ class ReadServiceRequest(SQLModel):
 class RoomReservation(SQLModel, table=True):            # was contenir
     __tablename__ = "room_reservations"
 
+    # Retour à la clé primaire composite parfaite
     room_id: int = Field(foreign_key="rooms.id", primary_key=True)
     reservation_id: int = Field(foreign_key="reservations.id", primary_key=True)
+    
+    # Nouveaux champs pour l'historisation des prix
+    unit_price: Decimal = Field(default=0, max_digits=10, decimal_places=2)
+    total_price: Decimal = Field(default=0, max_digits=10, decimal_places=2)
+    
     stay_status: payementStatusEnum = payementStatusEnum.IMpAYEE
     payment_date: Optional[datetime] = Field(default=None, sa_column=Column(DateTime))
-
 # ====================== MAIN ENTITIES ======================
 
 
@@ -275,8 +290,7 @@ class UpdateReservation(SQLModel):
     assigned_to: int | None = None
     user_id: int | None = None
 
-class OrderItem(SQLModel, table=True):                  # was commander
-
+class OrderItem(SQLModel, table=True):
     __tablename__ = "order_items"
 
     id: int | None = Field(default=None, primary_key=True)
@@ -284,14 +298,18 @@ class OrderItem(SQLModel, table=True):                  # was commander
     formule_id: int|None = Field(default=None, foreign_key="formule.id")
     reservation_id: int = Field(foreign_key="reservations.id")
     quantity_ordered: int
+
+    unit_price: Decimal = Field(default=0, max_digits=10, decimal_places=2)
+    total_price: Decimal = Field(default=0, max_digits=10, decimal_places=2)
+    
     order_date: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime))
     status: payementStatusEnum = payementStatusEnum.IMpAYEE
     payment_date: Optional[datetime] = Field(default=None, sa_column=Column(DateTime))
 
-    # relationships
     reservation: "Reservation" = Relationship(back_populates="order_items")
     product: "Product" = Relationship(back_populates="order_items")
     formule: "Formule" = Relationship(back_populates="order_items")
+
 
 class ReadOrderItem(SQLModel):
     id: int

@@ -1,8 +1,10 @@
 from datetime import datetime
 from typing import List
 from sqlmodel import Session, select
-from models.models import Reservation, RoomReservation, StatusResrvationEnum
-
+from models.models import (
+    Reservation, RoomReservation, StatusResrvationEnum, User,
+    
+)
 def is_room_available(
     session: Session, 
     room_ids: List[int], 
@@ -33,3 +35,19 @@ def is_room_available(
     
     # Si la liste est vide, aucune chambre n'est occupée, donc c'est disponible
     return len(occupied_rooms) == 0
+
+def build_email_context(user: User, reservation: Reservation) -> dict:
+    return {
+        "hotel_name": "SweetRest Aparthotel",
+        "client_name": f"{user.first_name} {user.last_name}",
+        "reservation_reference": reservation.reference,
+        "check_in_date": reservation.check_in.strftime("%d/%m/%Y à %H:%M"),
+        "check_out_date": reservation.check_out.strftime("%d/%m/%Y à %H:%M"),
+        "total_price": f"{reservation.total_price:,.0f}".replace(",", " "), # Format FCFA
+        "hotel_phone": "+225 07 XX XX XX XX",
+        "hotel_email": "contact@sra-hotel.com",
+        "hotel_address": "Yamoussoukro, Côte d'Ivoire",
+        "payment_phone": "+225 05 XX XX XX XX",
+        "payment_email": "paiement@sra-hotel.com",
+        "current_year": datetime.now().year,
+    }
