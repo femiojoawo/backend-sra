@@ -38,10 +38,9 @@ class OrderItemInput(BaseModel):
     quantity_ordered: int = 1
 
 class ReadReservationWithDetails(ReadReservation):
-    rooms: List[ReadRoomReservation]
-    services: List[ReadServiceRequest]
-    order_items: List[ReadOrderItem]
-
+    room_reservations: List[ReadRoomReservation] = []
+    service_requests: List[ReadServiceRequest] = []
+    order_items: List[ReadOrderItem] = []
 class ReservationFullUpdateInput(BaseModel):
     check_in: Optional[datetime] = None
     check_out: Optional[datetime] = None
@@ -82,13 +81,12 @@ def get_reservations(
         
     total = session.exec(total_statement).one()
     
-    return PaginatedResponse[ReadReservation](
+    return PaginatedResponse[ReadReservationWithDetails](
         total_pages= 1 if total <= filters.limit else (total // filters.limit),
         total=total,
         active_page=filters.page,
         data=reservations
     )
-
 
 @router.post("/", response_model=ReadReservationWithDetails, summary="Créer une réservation complète")
 def create_reservation(

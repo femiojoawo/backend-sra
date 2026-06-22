@@ -68,6 +68,8 @@ class ServiceRequest(SQLModel, table=True):
     payment_date: Optional[datetime] = Field(default=None, sa_column=Column(DateTime))
 
     service: "Service" = Relationship(back_populates="service_requests")
+    service: "Service" = Relationship(back_populates="service_requests")
+    reservation: "Reservation" = Relationship(back_populates="service_requests")
 
 class ReadServiceRequest(SQLModel):
     id: int
@@ -90,6 +92,8 @@ class RoomReservation(SQLModel, table=True):            # was contenir
     
     stay_status: payementStatusEnum = payementStatusEnum.IMpAYEE
     payment_date: Optional[datetime] = Field(default=None, sa_column=Column(DateTime))
+    room: "Room" = Relationship(back_populates="room_reservations")
+    reservation: "Reservation" = Relationship(back_populates="room_reservations")
 
 class ReadRoomReservation(SQLModel):
     room: "ReadRoomWithType"
@@ -272,8 +276,8 @@ class Reservation(BaseReservation, table=True):
     user: User = Relationship(back_populates="reservations")
 
     # relations many-to-many
-    rooms: List["Room"] = Relationship(back_populates="reservations", link_model=RoomReservation)
-    services: List["Service"] = Relationship(back_populates="reservations", link_model=ServiceRequest)
+    room_reservations: List["RoomReservation"] = Relationship(back_populates="reservation")
+    service_requests: List["ServiceRequest"] = Relationship(back_populates="reservation")
     order_items: List["OrderItem"] = Relationship(back_populates="reservation")
 
 
@@ -343,7 +347,7 @@ class Service(BaseService, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
     # relationship
-    reservations: List[Reservation] = Relationship(back_populates="services", link_model=ServiceRequest)
+
     service_requests : List[ServiceRequest] = Relationship(back_populates="service")
 
 class CreateService(BaseService):
@@ -516,10 +520,9 @@ class Room(BaseRoom, table=True):
 
     # relations
     room_type: RoomType = Relationship(back_populates="rooms")
-    reservations: List[Reservation] = Relationship(back_populates="rooms", link_model=RoomReservation)
     apartments: List[Apartment] = Relationship(back_populates="rooms", link_model=RoomApartment)
     images : List["RoomImage"] = Relationship(back_populates="room")
-
+    room_reservations: List[RoomReservation] = Relationship(back_populates="room")
 
 class CreateRoom(BaseRoom):
     pass
