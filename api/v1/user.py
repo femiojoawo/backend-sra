@@ -96,3 +96,26 @@ def delete_user(user_id: int, session: Session = Depends(get_session)):
     session.delete(user_db)
     session.commit()
     return user_db
+
+
+@router.post("/{user_id}/make-admin", response_model=ReadUser, summary="Promouvoir un utilisateur au rang d'Administrateur")
+def make_user_admin(
+    user_id: int,
+    session: Session = Depends(get_session),
+    # SÉCURITÉ : Seul un ADMIN peut promouvoir un autre utilisateur
+    current_user: User = Depends(auth_utils.RoleChecker([RoleEnum.CLIENT,  RoleEnum.ADMIN]))
+):
+    # 1. Vérifier si l'utilisateur cible existe
+    db_user = session.get(User, user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
+
+    # 2. Vérifier s'il n'est pas déjà administrateur
+    if db_user.role_name == RoleEnum.ADMIN:
+        raise HTTPException(status_code=400, detail="Cet utilisateur a déjà le rôle d'Administrateur.")
+
+    # 3. Mettre à jour le rôle
+    db_user.role_name = RoleEnum.ADMIN
+    session.add(db_user)
+    session.commit()
+    session.refresh(db_user)
