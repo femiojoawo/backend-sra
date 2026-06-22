@@ -67,14 +67,14 @@ async def upload_room_image(
         raise HTTPException(status_code=400, detail="Fichier trop volumineux. Taille maximale autorisée: 5 Mo")
     
     unique_filename = f"{room.room_type.name}-{room.room_number}-{secrets.token_urlsafe(3).upper().replace("_","")}{ext}" #Suite-12-UZR.jpg
-    file_location = config.UPLOADS_DIR / f"{room_id}_{unique_filename}"
+    file_location = config.UPLOADS_DIR / f"{unique_filename}"
     try:
         file_location.write_bytes(content) # enregistrer le fichier sur le disque
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur lors de l'enregistrement du fichier: {str(e)}")
     
     # woww url finale de l'image
-    image_url = f"/{config.uploads_url}/rooms/{file_location.name}"
+    image_url = f"{config.uploads_url}/{file_location.name}"
 
     new_image = RoomImage(name=unique_filename, url=image_url, room_id=room_id)
     session.add(new_image)
@@ -101,6 +101,7 @@ def delete_room_image(
     # Supprimer le fichier de l'image du disque
     file_path = config.UPLOADS_DIR / image.name
     if file_path.exists():
+        print(f"Suppression du fichier: {file_path}")  # Log pour vérifier le chemin
         file_path.unlink()
 
     session.delete(image)

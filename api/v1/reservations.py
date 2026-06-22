@@ -97,7 +97,7 @@ def create_reservation(
     room_ids: List[int] = Body(..., description="Liste des IDs des chambres"),
     services: List[ServiceRequestInput] = Body(default=[], description="Services demandés au moment de la réservation"),
     order_items: List[OrderItemInput] = Body(default=[], description="Produits ou formules commandés"),
-    background_tasks: BackgroundTasks,
+    #background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     current_user: User = Depends(auth_utils.get_current_user)
 ):
@@ -203,14 +203,14 @@ def create_reservation(
     session.refresh(db_reservation)
 
     # 8. Envoi de l'e-mail en arrière-plan
-    email_data = build_email_context(session, current_user, db_reservation)
-    background_tasks.add_task(
-        send_reservation_email,
-        email=current_user.email,
-        reservation_details=email_data,
-        message_title="Votre demande de réservation a été enregistrée",
-        template_name="reservations/reservation_pending.html"
-    )
+    # email_data = build_email_context(session, current_user, db_reservation)
+    # background_tasks.add_task(
+    #     send_reservation_email,
+    #     email=current_user.email,
+    #     reservation_details=email_data,
+    #     message_title="Votre demande de réservation a été enregistrée",
+    #     template_name="reservations/reservation_pending.html"
+    # )
 
     return db_reservation
 

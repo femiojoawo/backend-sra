@@ -32,8 +32,8 @@ class Settings(BaseSettings):
     model_config = {"env_file": str(ENV_FILE)}
 
     # chemin
-    uploads_url: str = "/uploads"
-    UPLOADS_DIR : Path = Path(__file__).resolve().parent.parent.parent / "uploads"
+    uploads_url: str = "/uploads/rooms" # URL pour accéder aux images des chambres
+    UPLOADS_DIR : Path = Path(__file__).resolve().parent.parent.parent / "uploads" / "rooms"
 
 
 config = Settings()
