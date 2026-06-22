@@ -90,6 +90,14 @@ class RoomReservation(SQLModel, table=True):            # was contenir
     
     stay_status: payementStatusEnum = payementStatusEnum.IMpAYEE
     payment_date: Optional[datetime] = Field(default=None, sa_column=Column(DateTime))
+
+class ReadRoomReservation(SQLModel):
+    room: "ReadRoomWithType"
+    unit_price: Decimal =0
+    total_price: Decimal =0
+    stay_status: payementStatusEnum
+    payment_date: Optional[datetime]
+
 # ====================== MAIN ENTITIES ======================
 
 
@@ -251,7 +259,7 @@ class BaseReservation(SQLModel):
     description: str | None = Field(default=None)
     status: StatusResrvationEnum = StatusResrvationEnum.EN_ATTENTE
     total_price: Decimal = Field(default=0, max_digits=10, decimal_places=2)
-    assigned_to: int = Field(default=None, foreign_key="users.id") # l'admin ou le réceptionniste qui gère la réservation 
+    assigned_to: int = Field(default=None) #celui a qui apartient la reservation
 
 
 class Reservation(BaseReservation, table=True):
