@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 
 from auth import auth_utils
 from dependencies import get_session
-from models.models import CreateRoomType, PaginatedResponse, ReadRoomType, RoleEnum, RoomType, RoomTypeFilters, User
+from models.models import CreateRoomType, Equipement, PaginatedResponse, ReadRoomType, RoleEnum, RoomType, RoomTypeFilters, User
 
 
 router = APIRouter(

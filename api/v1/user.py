@@ -90,12 +90,15 @@ def update_user(user_id: int,
     session.refresh(user_db)
     return user_db
 
-@router.delete("/{user_id}", response_model=ReadUser)
-def delete_user(user_id: int, session: Session = Depends(get_session)):
+@router.post("/{user_id}/make-inactif", response_model=ReadUser,status_code=200, summary="Désactiver un utilisateur", description="Désactive un utilisateur spécifique par son ID. Seuls les administrateurs peuvent effectuer cette action.")
+def make_user_inactif(*,
+    user_id: int, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(auth_utils.RoleChecker([RoleEnum.ADMIN]))):
     user_db = session.get(User, user_id)
     if not user_db:
         raise HTTPException(status_code=404, detail="Utilisateur Introuvable")
-    session.delete(user_db)
+    user_db.is_active = False  # ohh ehh on ne supprimer un user on le rend inactif orr
     session.commit()
     return user_db
 
