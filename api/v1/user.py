@@ -2,10 +2,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, HTTPException, Body
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, select
+from sqlmodel import Session, func, select
 from auth import auth_utils
 from dependencies import get_session
-from models.models import  UpdateUser, User, CreateUser, ReadUser, UserFilters, PaginatedResponse, RoleEnum
+from models.models import ( Reservation, UpdateUser, 
+    User, CreateUser, ReadUser, UserFilters, 
+    PaginatedResponse, RoleEnum,ReadReservation, FilterParams)
 
 router = APIRouter(
     prefix="/users",
@@ -119,3 +121,54 @@ def make_user_admin(
     session.add(db_user)
     session.commit()
     session.refresh(db_user)
+
+    return db_user
+
+
+@router.get("/me/reservations", response_model=PaginatedResponse[ReadReservation], summary="Lister mes propres réservations")
+def get_my_reservations(
+    filters: Annotated[FilterParams, Query()],
+    session: Session = Depends(get_session),
+    # N'importe quel utilisateur connecté peut voir ses propres réservations
+    current_user: User = Depends(auth_utils.get_current_user)
+):
+    # On filtre sur assigned_to car on cherche les réservations où l'utilisateur est le client final
+    statement = select(Reservation).where(Reservation.assigned_to == current_user.id)
+    total_statement = select(func.count(Reservation.id)).where(Reservation.assigned_to == current_user.id)
+
+    total = session.exec(total_statement).one()
+    reservations = session.exec(statement.offset(filters.get_page).limit(filters.limit)).all()
+
+    return PaginatedResponse[ReadReservation](
+        total_pages=(total + filters.limit - 1) // filters.limit if total > 0 else 1,
+        total=total,
+        active_page=filters.page,
+        data=reservations
+    )
+
+@router.get("/{user_id}/reservations", response_model=PaginatedResponse[ReadReservation], summary="Lister les réservations d'un client spécifique")
+def get_user_reservations(
+    user_id: int,
+    filters: Annotated[FilterParams, Query()],
+    session: Session = Depends(get_session),
+    # Sécurité : Seul le staff peut consulter l'historique d'un autre client
+    current_user: User = Depends(auth_utils.RoleChecker([RoleEnum.ADMIN, RoleEnum.RECEPTIONISTE]))
+):
+    # Vérifier que le client existe bien
+    db_user = session.get(User, user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
+
+    # On récupère toutes les réservations où cet utilisateur est le client
+    statement = select(Reservation).where(Reservation.assigned_to == user_id)
+    total_statement = select(func.count(Reservation.id)).where(Reservation.assigned_to == user_id)
+
+    total = session.exec(total_statement).one()
+    reservations = session.exec(statement.offset(filters.get_page).limit(filters.limit)).all()
+
+    return PaginatedResponse[ReadReservation](
+        total_pages=(total + filters.limit - 1) // filters.limit if total > 0 else 1,
+        total=total,
+        active_page=filters.page,
+        data=reservations
+    )

@@ -80,3 +80,63 @@ def delete_room_type(*, room_type_id: int, session: Session = Depends(get_sessio
     session.delete(room_type)
     session.commit()
     return {"detail": "Type de chambre supprimé avec succès"}
+
+
+@router.post("/{room_type_id}/equipements/{equipement_id}", response_model=ReadRoomType, summary="Associer un équipement à un type de chambre")
+def add_equipement_to_room_type(
+    room_type_id: int,
+    equipement_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(auth_utils.RoleChecker([RoleEnum.ADMIN]))
+):
+    # 1. Vérifier si le type de chambre existe
+    db_room_type = session.get(RoomType, room_type_id)
+    if not db_room_type:
+        raise HTTPException(status_code=404, detail="Type de chambre introuvable")
+
+    # 2. Vérifier si l'équipement existe
+    db_equipement = session.get(Equipement, equipement_id)
+    if not db_equipement:
+        raise HTTPException(status_code=404, detail="Équipement introuvable")
+
+    # 3. Vérifier s'il n'est pas déjà associé pour éviter les doublons
+    if db_equipement in db_room_type.equipements:
+        raise HTTPException(status_code=400, detail="Cet équipement est déjà associé à ce type de chambre.")
+
+    # 4. Ajouter l'équipement à la liste (SQLModel gère la table de jonction automatiquement)
+    db_room_type.equipements.append(db_equipement)
+    session.add(db_room_type)
+    session.commit()
+    session.refresh(db_room_type)
+
+    return db_room_type
+
+
+@router.delete("/{room_type_id}/equipements/{equipement_id}", response_model=ReadRoomType, summary="Retirer un équipement d'un type de chambre")
+def remove_equipement_from_room_type(
+    room_type_id: int,
+    equipement_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(auth_utils.RoleChecker([RoleEnum.ADMIN]))
+):
+    # 1. Vérifier si le type de chambre existe
+    db_room_type = session.get(RoomType, room_type_id)
+    if not db_room_type:
+        raise HTTPException(status_code=404, detail="Type de chambre introuvable")
+
+    # 2. Vérifier si l'équipement existe
+    db_equipement = session.get(Equipement, equipement_id)
+    if not db_equipement:
+        raise HTTPException(status_code=404, detail="Équipement introuvable")
+
+    # 3. Vérifier si l'association existe bien avant de la supprimer
+    if db_equipement not in db_room_type.equipements:
+        raise HTTPException(status_code=400, detail="Cet équipement n'est pas associé à ce type de chambre.")
+
+    # 4. Retirer l'équipement de la liste
+    db_room_type.equipements.remove(db_equipement)
+    session.add(db_room_type)
+    session.commit()
+    session.refresh(db_room_type)
+
+    return db_room_type
