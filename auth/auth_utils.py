@@ -6,9 +6,12 @@ from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
 from sqlmodel import Session
+# pyrefly: ignore [missing-import]
 from dependencies import get_session
+# pyrefly: ignore [missing-import]
 from core.config import config
-from models.models import RoleEnum, User, JWTInfoUser
+# pyrefly: ignore [missing-import]
+from models.models import RoleEnum, User, JWTPayload
 
 
 # Outil pour hacher et vérifier les mots de passe
@@ -24,7 +27,7 @@ def verify_password(plain_password, hashed_password):
 def get_password_hash(password):
     return pwd_context.hash(password)
 
-def create_access_token(data: JWTInfoUser):
+def create_access_token(data: JWTPayload) -> str:
     to_encode = {"sub": str(data.id), "role": data.role_name}
     expire = datetime.now() + timedelta(minutes=config.access_token_expire_minutes)
     to_encode.update({"exp": expire})
@@ -43,7 +46,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: Session
     )
     try:
         # On décode le token
-        print(token)
         payload = jwt.decode(token, config.secret_key, algorithms=[config.algorithm])
         user_id: int = int(payload.get("sub"))
         user = session.get(User, user_id)

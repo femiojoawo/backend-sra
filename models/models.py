@@ -31,6 +31,7 @@ class RoomTypeEquipement(SQLModel, table=True):            # was detenir
 class RoomApartment(SQLModel, table=True):              # was composer
   
     __tablename__ = "room_apartments"
+    
 
     room_id: int = Field(foreign_key="rooms.id", primary_key=True)
     apartment_id: int = Field(foreign_key="apartments.id", primary_key=True)
@@ -47,7 +48,7 @@ class FormuleProduct(SQLModel, table=True):             # was former
 
 
 
-class ServiceRequest(SQLModel, table=True):             
+class ServiceRequest(SQLModel, table=True):  
     __tablename__ = "service_requests"
 
     # Ajout de l'ID unique (clé primaire)
@@ -132,18 +133,18 @@ def _validate_phone(value: str) -> str:
 PhoneStr = Annotated[str, BeforeValidator(_validate_phone)]
 
 class BaseUser(SQLModel):
-    email: EmailStr
-    phone_number: PhoneStr
+    email: EmailStr = Field(unique=True)
+    phone_number: PhoneStr = Field(unique=True)
     is_active: bool = Field(default=True)
-    last_name: str                 # was nom_user
-    first_name: str # was prenom_user
+    last_name: str                 
+    first_name: str 
 
 class User(BaseUser, table=True):
     __tablename__ = "users"
 
     id: int|None = Field(default=None, primary_key=True)
     password: str 
-    role_name: RoleEnum =  RoleEnum.CLIENT               # was nom_role
+    role_name: RoleEnum =  RoleEnum.CLIENT 
     created_at: datetime = Field(default_factory=datetime.now)
     # relationships
     reservations: List["Reservation"] = Relationship(back_populates="user") # la liste des reservation pour un utilisateur
@@ -164,7 +165,7 @@ class UpdateUser(SQLModel):
     first_name: str = None
     role_name: RoleEnum = None
 
-class JWTInfoUser(SQLModel):
+class JWTPayload(SQLModel):
     id: int
     role_name: RoleEnum
 

@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
 from .auth_utils import verify_password, get_password_hash, create_access_token
-from models.models import JWTInfoUser, LoginUser, User
+# pyrefly: ignore [missing-import]
+from models.models import JWTPayload, LoginUser, User
+# pyrefly: ignore [missing-import]
 from dependencies import get_session
 
 session: Session = Depends(get_session)
@@ -23,7 +25,7 @@ async def login(session: Session = session,form_data: OAuth2PasswordRequestForm 
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token = create_access_token(data=JWTInfoUser(id=user_db.id, role_name=user_db.role_name))
+    access_token = create_access_token(data=JWTPayload(id=user_db.id, role_name=user_db.role_name))
     
     # 4. On retourne le token
     return {"access_token": access_token, "token_type": "bearer"}
